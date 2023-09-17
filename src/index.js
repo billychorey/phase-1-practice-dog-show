@@ -1,92 +1,90 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const fetchUrl = 'http://localhost:3000/dogs';
-    const table = document.getElementById('table');
-    const form = document.getElementById('dog-form');
-    const name = document.getElementById('name-input');
-    const breed = document.getElementById('breed-input');
-    const gender = document.getElementById('gender-input');
-    const formSubmit = document.getElementById('form-submit');
+    const fetchUrl = '  http://localhost:3000/dogs';
+    const nameInput = document.getElementById('name-input');
+    const breedInput = document.getElementById('breed-input');
+    const sexInput = document.getElementById('gender-input');
+    const submitBtn = document.getElementById('form-submit');
+    let dogName;
+    let dogBreed;
+    let dogSex;
+    
+    async function fetchDogs() {
+        const response = await fetch(fetchUrl);
+        const dogInfo = await response.json();
 
-    let selectedDogId = null; // Store the ID of the selected dog
+        console.log(dogInfo);
+        dogInfo.forEach((dog) => {
+            const tr = document.createElement('tr');
+            const dogId = dog.id;
+            const trId = dogId;
+            tr.id = trId;
 
-    fetch(fetchUrl)
-        .then(res => res.json())
-        .then(data => {
-            console.log(data);
+            dogName = dog.name;
+            dogBreed = dog.breed;
+            dogSex = dog.sex;
+            const buttonId = dog.id;
+            tr.innerHTML +=`
+            <td id = ${dogName} class="name">${dogName}</td>
+            <td id = ${dogBreed} class="breed">${dogBreed}</td>
+            <td id = ${dogSex} class="sex">${dogSex}</td>
+            <td><button id=button-${buttonId}>Edit</button></td>
+            `
+            const tableBody = document.getElementById('table-body');
+            tableBody.appendChild(tr);
+            const button = tr.querySelector(`#button-${buttonId}`);
+            button.addEventListener('click',handleClick);
+        }
+    )}
+    fetchDogs();
 
-            data.forEach(item => {
-                let dogRow = document.createElement('tr');
-                dogRow.dataset.dogId = item.id; // Struggle bus with getting the id, so make it a data attribute
+    function handleClick(e) {
+        const row = e.target.parentElement.parentElement; 
+        nameInput.setAttribute('data-id', row.id);
+    
+        nameInput.value = row.querySelector('.name').innerText;
+        breedInput.value = row.querySelector('.breed').innerText;
+        sexInput.value = row.querySelector('.sex').innerText;
+    }
 
-                let dogName = document.createElement('td');
-                dogName.textContent = item.name;
-                let dogBreed = document.createElement('td');
-                dogBreed.textContent = item.breed;
-                let dogGender = document.createElement('td');
-                dogGender.textContent = item.sex;
-                let buttonTd = document.createElement('td');
-                let button = document.createElement('button');
-                button.textContent = 'Edit';
+    submitBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const dogId = nameInput.getAttribute('data-id'); 
+        updateDog(dogId);
+    });
 
-                dogRow.appendChild(dogName);
-                dogRow.appendChild(dogBreed);
-                dogRow.appendChild(dogGender);
-                dogRow.appendChild(buttonTd);
-                buttonTd.appendChild(button);
+    function updateDog(dogId) {
+        const dogToUpdate = {
+            id: dogId,
+            name: nameInput.value,
+            breed: breedInput.value,
+            sex: sexInput.value
+        };
 
-                table.appendChild(dogRow);
+        fetch((`http://localhost:3000/dogs/${dogId}`), {
+            method: 'PATCH',
+            headers:{
+                'Content-Type' : 'application/json'
+            },
+            body: JSON.stringify(dogToUpdate)
+            })
+            .then(res => res.json())
+            .then(updatedDog => {
+              
+                const tableRowID = nameInput.getAttribute('data-id');
+                const tableRow = document.getElementById(tableRowID)
+                tableRow.querySelector('.name').textContent = updatedDog.name;
+                tableRow.querySelector('.breed').textContent = updatedDog.breed;
+                tableRow.querySelector('.sex').textContent = updatedDog.sex;
 
-                button.addEventListener('click', () => {
-                    displayDogInfo(item);
-                });
 
-                function displayDogInfo(dog) {
-                    name.value = dog.name;
-                    breed.value = dog.breed;
-                    gender.value = dog.sex;
-                    selectedDogId = dog.id; // Store the selected dog's ID
-                }
-            });
+                nameInput.value = '';
+                breedInput.value = '';
+                sexInput.value = '';
+            })
 
-            formSubmit.addEventListener('click', handleSubmit);
+        }
+    }
 
-            function handleSubmit(e) {
-                e.preventDefault();
-
-                if (selectedDogId) {
-                    const updatedDog = {
-                        name: name.value,
-                        breed: breed.value,
-                        sex: gender.value
-                    };
-
-                    fetch(`${fetchUrl}/${selectedDogId}`, {
-                        method: "PATCH",
-                        headers: {
-                            "Content-Type": "application/json",
-                            Accept: "application/json"
-                        },
-                        body: JSON.stringify(updatedDog)
-                    })
-                    .then(res => res.json())
-                    .then(updatedDog => {
-                        console.log('Updated Dog:', updatedDog);
-
-                        // Update the table row with the new data
-                        const tableRow = table.querySelector(`tr[data-dog-id="${selectedDogId}"]`);
-                        if (tableRow) {
-                            tableRow.querySelector('td:nth-child(1)').textContent = updatedDog.name;
-                            tableRow.querySelector('td:nth-child(2)').textContent = updatedDog.breed;
-                            tableRow.querySelector('td:nth-child(3)').textContent = updatedDog.sex;
-                        }
-                    })
-                    .catch(error => {
-                        console.error("Error updating dog:", error);
-                    });
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching data:', error);
-        });
-});
+)
+        
+       
